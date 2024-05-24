@@ -37,6 +37,6 @@
   },
   "homepage": "https://github.com/hackariens/sylius#readme",
   "dependencies": {
-    "korojscommands": "^1.2.14"
+    "korojscommands": "^1.2.22"
   }
 }
