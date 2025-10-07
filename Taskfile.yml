@@ -51,9 +51,7 @@ tasks:
   create:apps:
     desc: "Crée un nouveau projet Sylius dans le dossier apps"
     cmds:
-    - mkdir -p install
-    - docker run --rm -v $(pwd)/install:/var/www -w /var/www -e COMPOSER_MEMORY_LIMIT=512M --user $(id -u):$(id -g) koromerzhin/php:8.4.3-apache-symfony composer create-project sylius/sylius-standard apps
-    - cp -r ./install/apps/ .
+    - docker run --rm -v $(pwd):/var/www -w /var/www -e COMPOSER_MEMORY_LIMIT=512M --user $(id -u):$(id -g) koromerzhin/php:8.4.3-apache-symfony composer create-project sylius/sylius-standard apps
 
   sylius:getapacheconf:
     desc: "Récupère la configuration Apache depuis l'image Docker"
