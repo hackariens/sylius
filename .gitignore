@@ -1,3 +1,7 @@
 /node_modules
 /apps
 .env
+/install
+/conf/apache2
+docker-compose-*.yml
+!docker-compose-lampy.yml
