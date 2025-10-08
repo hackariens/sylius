@@ -45,11 +45,13 @@ tasks:
   help:
     desc: "Affiche l'aide détaillée"
     aliases: [ h ]
+    silent: true
     cmds:
     - task: default
 
   create:apps:
     desc: "Crée un nouveau projet Sylius dans le dossier apps"
+    silent: true
     cmds:
     - docker run --rm -v $(pwd):/var/www -w /var/www -e COMPOSER_MEMORY_LIMIT=512M --user $(id -u):$(id -g) koromerzhin/php:8.4.3-apache-symfony composer create-project sylius/sylius-standard apps
     - rm -rf apps/.git
@@ -59,7 +61,7 @@ tasks:
     silent: true
     cmds:
     - rm -rf ./conf/apache2 || true
-    - docker create --name sylius-php koromerzhin/php:8.4.3-apache-symfony 
+    - docker create --name sylius-php koromerzhin/php:8.4.3-apache-symfony
     - mkdir -p ./conf/apache2
     - docker cp sylius-php:/etc/apache2/sites-available/000-default.conf ./conf/apache2/000-default.conf
     - docker cp sylius-php:/etc/apache2/apache2.conf ./conf/apache2/apache2.conf
@@ -85,7 +87,7 @@ tasks:
       vars:
         SOURCE_FILE: ./{{.FOLDERSQL}}/{{.FILESQL}}
         DEST_DIR: "{{.FOLDERLAMPY}}/mariadb_init/"
-        FORCE: "true"
+        FORCE: true
 
   sylius:getpull-image:
     desc: "Télécharge les images Docker définies dans le docker-compose.yml"
@@ -129,6 +131,7 @@ tasks:
 
   sylius:exec:
     desc: "Exécute une commande dans un conteneur en cours d'exécution"
+    silent: true
     cmds:
     - task: sylius:set-env-ids
     - task: sylius:copysql
@@ -141,6 +144,7 @@ tasks:
 
   sylius:download-phar:
     desc: "Télécharger les différents fichiers phar"
+    silent: true
     cmds:
     - task: download:php:tools
       vars:
@@ -148,6 +152,7 @@ tasks:
 
   sylius:bash:
     desc: "Ouvre un shell bash dans le conteneur www"
+    silent: true
     cmds:
     - task: docker:stack:shell
       vars:
