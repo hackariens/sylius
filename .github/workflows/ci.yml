@@ -1,23 +1,12 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 on: 
   push:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
+    branches: [main, develop]
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-
-env:
-  NODE_VERSION: '22'
-  DOCKER_COMPOSE_VERSION: '2.29.7'
-  PHP_VERSION: '8.3'
+    branches: [main, develop]
 
 jobs:
-  ci:
+  lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -25,52 +14,92 @@ jobs:
     steps:
       # === SETUP PHASE ===
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       
       - name: Setup Docker Compose
-        run: |
-          if ! command -v docker-compose &> /dev/null; then
-            sudo curl -L "https://github.com/docker/compose/releases/download/v${{ env.DOCKER_COMPOSE_VERSION }}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-          fi
-          docker-compose --version
+        uses: docker/setup-compose-action@v1
       
       - name: Setup Task
         uses: go-task/setup-task@v1
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
-      
-      - name: Repository lampy
-        uses: actions/checkout@v4
+
+      - name: Setup cache
+        uses: actions/cache@v4
         with:
-          submodules: recursive
-          repository: koromerzhin/lampy
-          ref: 'v4.0'
-          path: lampy
-      
-      # === BUILD PHASE ===
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-
+
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit
+        run: |
+            if [ ! -d node_modules ]; then
+                npm install
+            fi
       
       - name: Setup environment files
         run: |
           cp .env.example .env
       
-      # === INFRASTRUCTURE PHASE ===
-      - name: Setup Docker cache
+      - name: lint all
+        run: task lint:all
+
+  launch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      DOCKER_INTERACTIVE: false
+    steps:
+      # === SETUP PHASE ===
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      
+      - name: Setup Docker Compose
+        uses: docker/setup-compose-action@v1
+      
+      - name: Setup Task
+        uses: go-task/setup-task@v1
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+      
+      - name: Repository lampy
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          repository: koromerzhin/lampy
+          ref: '4.3'
+          path: lampy
+
+      - name: Setup cache
         uses: actions/cache@v4
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: |
+            if [ ! -d node_modules ]; then
+                npm install
+            fi
+      
+      - name: Setup environment files
+        run: |
+          cp .env.example .env
       
       - name: Setup database and infrastructure
         run: |
@@ -99,6 +128,12 @@ jobs:
         env:
           CYPRESS_CACHE_FOLDER: ~/.cache/Cypress
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+      
+      - name: Docker stack stop
+        if: always()
+        run: |
+          docker stack rm sylius
+          docker stack rm lampy
       
       # === ARTIFACTS PHASE ===
       - name: Archive test results
